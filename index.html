@@ -270,7 +270,7 @@ if(DEMO){
     async login(e,p){return (await A.signInWithEmailAndPassword(auth,e,p)).user},
     async logout(){await A.signOut(auth)},
     onUser(cb){A.onAuthStateChanged(auth,cb)},
-    start(t,c,conn){
+    start(t,c,conn,l){
       let meta=null,tk=null;
       D.onValue(D.ref(db,'meta'),s=>{meta=s.val();if(tk)t(tk,meta)});
       D.onValue(D.ref(db,'tickets'),s=>{tk=s.val()||{};t(tk,meta)});
