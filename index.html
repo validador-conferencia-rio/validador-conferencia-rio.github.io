@@ -80,7 +80,12 @@ nav button.on{color:var(--acc)}
 #login .card{display:grid;gap:10px;background:#000;border-color:#222}
 .banner{background:#e0a40022;border:1px solid #e0a40066;color:#ffd256;border-radius:12px;padding:10px 12px;font-size:13px}
 .banner.err{background:#d23a3a22;border-color:#d23a3a66;color:#ff9a9a}
+#tab-val{display:grid;gap:12px}.rcol{display:grid;gap:12px;align-content:start}
+.wrap{max-width:1180px;margin:0 auto}
+@media(max-width:360px){.hlogo{display:none}.stats b{font-size:15px}main{padding:8px}.card{padding:11px}.big{font-size:26px}}
 @media(min-width:760px){.big{font-size:38px}.name{font-size:26px}}
+@media(min-width:960px){main{max-width:1180px;padding:18px}#tab-val:not(.hide){grid-template-columns:minmax(340px,420px) 1fr;align-items:start}.list{grid-template-columns:1fr 1fr}#tab-bus .card,#tab-log .card{padding:18px}nav{justify-content:center}nav button{flex:0 0 150px}.hlogo{height:26px}}
+@media(min-width:960px) and (max-height:760px){#camWrap{max-width:340px}}
 </style>
 </head>
 <body>
@@ -102,6 +107,7 @@ nav button.on{color:var(--acc)}
 <!-- APP -->
 <div id="app" class="hide">
 <header>
+  <div class="wrap">
   <div class="hrow">
     <img src="logo.png" class="hlogo" alt="">
     <span class="dot" id="dot" title="conexão"></span>
@@ -110,14 +116,15 @@ nav button.on{color:var(--acc)}
   </div>
   <div class="bar"><div id="pbar"></div></div>
   <div class="sub"><span id="devLbl"></span><span id="connLbl">conectando…</span></div>
+  </div>
 </header>
 
 <main>
   <div id="noBase" class="banner hide">Nenhuma base carregada ainda. O admin precisa carregar o Excel na aba <b>Admin</b>.</div>
 
   <!-- VALIDAR -->
-  <section id="tab-val" class="tab" style="display:grid;gap:12px">
-    <div class="card" style="display:grid;gap:10px">
+  <section id="tab-val" class="tab">
+    <div class="card" style="display:grid;gap:10px;align-content:start">
       <div id="camWrap">
         <video id="video" playsinline muted class="hide"></video>
         <div class="frame hide" id="frame"></div>
@@ -130,11 +137,14 @@ nav button.on{color:var(--acc)}
       </div>
       <button id="camStop" class="sm hide">Fechar câmera</button>
     </div>
+    <div class="rcol">
+    <div id="idle" class="card mut">Leia um QR code ou digite o código. O resultado aparece aqui.</div>
     <div id="result" class="hide"></div>
     <div class="card hide" id="groupCard">
       <h3 id="groupTitle"></h3>
       <button class="pri" id="allBtn" style="width:100%;margin-bottom:10px"></button>
       <div class="list" id="groupList"></div>
+    </div>
     </div>
   </section>
 
@@ -325,22 +335,23 @@ async function validate(raw,via){
   else{
     busy=true;let r;try{r=await B.checkin(k,entryData(via),checkins)}catch(err){busy=false;result('err','ERRO',esc(t.n),'Não gravou: '+esc(err.code||err.message)+'<br>Verifique login/conexão e tente de novo.');return}busy=false;
     if(r.ok)result('ok','LIBERADO',esc(t.n),meta+(r.offline?'<br><b>⚠ sem conexão — sincroniza quando voltar</b>':''));
-    else{const e=r.existing||{};result('warn','JÁ ENTROU',esc(t.n),`${meta}<br>Entrada às <b>${fmtT(e.t)}</b> · ${esc(e.d)}`)}
+    else{const e=r.existing||{};result('warn','JÁ ENTROU',esc(t.n),`${meta}<br>Entrada às <b>${fmtT(e.t)}</b><br>Validado por: <b>${who(e)}</b>`)}
   }
   renderGroup(t);
 }
 function result(cls,big,name,meta){
-  const R=$('result');R.className=cls;R.innerHTML=`<div class="big">${big}</div><div class="name">${name}</div><div class="meta">${meta}</div>`;
+  $('idle').classList.add('hide');const R=$('result');R.className=cls;R.innerHTML=`<div class="big">${big}</div><div class="name">${name}</div><div class="meta">${meta}</div>`;
   const F=$('flash');F.className=cls;F.innerHTML=`<div class="big">${big}</div><div class="name">${name}</div><div class="meta">${meta}</div><div class="tap">toque para fechar</div>`;
   clearTimeout(F._t);F._t=setTimeout(()=>F.classList.add('hide'),cls==='ok'?1600:3200);
   beep(cls==='ok');
 }
 $('flash').onclick=()=>$('flash').classList.add('hide');
 
+const who=c=>c?`${esc(c.d)}${c.u?' · '+esc(c.u):''}`:'';
 function situ(t){if(!isValid(t))return`<span class="pill p-bad">${esc(t.s)}</span>`;const c=checkins[t.k];return c?`<span class="pill p-in">Entrou ${fmtT(c.t).slice(0,5)}</span>`:'<span class="pill p-ok">Pendente</span>'}
 function itemHTML(t){
   const pend=isValid(t)&&!checkins[t.k];
-  return`<div class="it"><div class="n">${esc(t.n)}</div><div class="a">${situ(t)}${pend?`<button class="sm" data-lib="${esc(t.k)}">Liberar</button>`:''}</div><div class="d">${esc(t.k)} · ${esc(t.t)} · Pedido ${esc(t.p)}${norm(t.c)&&norm(t.c)!==norm(t.n)?' · comprador: '+esc(t.c):''}</div></div>`;
+  return`<div class="it"><div class="n">${esc(t.n)}</div><div class="a">${situ(t)}${pend?`<button class="sm" data-lib="${esc(t.k)}">Liberar</button>`:''}</div><div class="d">${esc(t.k)} · ${esc(t.t)} · Pedido ${esc(t.p)}${norm(t.c)&&norm(t.c)!==norm(t.n)?' · comprador: '+esc(t.c):''}${checkins[t.k]?`<br><b>Validado por:</b> ${who(checkins[t.k])}`:''}</div></div>`;
 }
 function renderGroup(t){
   curT=t;const ks=(byBuyer.get(t._b)||[]).filter(k=>k!==t.k);
@@ -361,7 +372,7 @@ $('allBtn').onclick=async()=>{
 document.addEventListener('click',async e=>{
   const k=e.target.dataset?.lib;if(!k)return;e.target.disabled=true;
   let r;try{r=await B.checkin(k,entryData('manual'),checkins)}catch(err){alert('Erro: '+(err.code||err.message));e.target.disabled=false;return}
-  if(r.ok)beep(true);else{beep(false);alert(`Já entrou às ${fmtT(r.existing?.t)} · ${r.existing?.d||''}`)}
+  if(r.ok)beep(true);else{beep(false);alert(`Já entrou às ${fmtT(r.existing?.t)} — validado por ${r.existing?.d||''} ${r.existing?.u||''}`)}
 });
 $('code').addEventListener('keydown',e=>{if(e.key==='Enter'){validate(e.target.value,'leitor');e.target.value=''}});
 $('go').onclick=()=>{validate($('code').value,'digitado');$('code').value=''};
@@ -381,9 +392,9 @@ function refresh(){
 }
 function renderLog(){
   const es=Object.entries(checkins).sort((a,b)=>b[1].t-a[1].t);
-  const per={};es.forEach(([,v])=>per[v.d]=(per[v.d]||0)+1);
+  const per={};es.forEach(([,v])=>{const k=v.u?`${v.d} (${v.u})`:v.d;per[k]=(per[k]||0)+1});
   $('perDev').innerHTML=Object.entries(per).sort((a,b)=>b[1]-a[1]).map(([d,n])=>`${esc(d)}: <b>${n}</b>`).join(' · ')||'Nenhuma entrada ainda';
-  $('logList').innerHTML=es.slice(0,100).map(([k,v])=>{const t=T[k]||{};return`<div class="it"><div class="n">${esc(t.n||k)}</div><div class="a"><span class="pill p-in">${fmtT(v.t)}</span><button class="sm danger" data-undo="${esc(k)}">desfazer</button></div><div class="d">${esc(k)} · ${esc(t.t)} · ${esc(v.d)} · ${esc(v.v)}</div></div>`}).join('');
+  $('logList').innerHTML=es.slice(0,100).map(([k,v])=>{const t=T[k]||{};return`<div class="it"><div class="n">${esc(t.n||k)}</div><div class="a"><span class="pill p-in">${fmtT(v.t)}</span><button class="sm danger" data-undo="${esc(k)}">desfazer</button></div><div class="d">${esc(k)} · ${esc(t.t)} · Pedido ${esc(t.p)}<br><b>Validado por:</b> ${who(v)} · ${esc(v.v)}</div></div>`}).join('');
 }
 document.addEventListener('click',async e=>{const k=e.target.dataset?.undo;if(!k)return;if(confirm(`Desfazer entrada de ${T[k]?.n||k}?`))await B.undo(k)});
 function doSearch(){
