@@ -1,0 +1,18 @@
+{
+  "rules": {
+    ".read": "auth != null",
+    "tickets": {
+      ".write": "auth != null && auth.token.email === 'admin@validador.app'"
+    },
+    "meta": {
+      ".write": "auth != null && auth.token.email === 'admin@validador.app'"
+    },
+    "checkins": {
+      ".write": "auth != null && auth.token.email === 'admin@validador.app'",
+      "$code": {
+        ".write": "auth != null && root.child('tickets').child($code).exists()",
+        ".validate": "!newData.exists() || newData.hasChildren(['t', 'd'])"
+      }
+    }
+  }
+}

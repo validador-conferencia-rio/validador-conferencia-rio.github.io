@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1512">
+<meta name="robots" content="noindex">
+<title>Validador de Ingressos</title>
+<style>
+:root{--bg:#0f1512;--card:#18211c;--line:#2a3830;--tx:#e9efe9;--mut:#93a39a;--ok:#1fa35b;--warn:#e0a400;--err:#d23a3a;--acc:#b6d334;--nav:64px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
+.hide{display:none!important}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px calc(8px);padding-top:max(10px,env(safe-area-inset-top))}
+.hrow{display:flex;align-items:center;gap:10px}
+.hrow h1{font-size:16px;margin:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--err);flex:none;box-shadow:0 0 0 3px #d23a3a33}
+.dot.on{background:var(--ok);box-shadow:0 0 0 3px #1fa35b33}
+.stats{margin-left:auto;text-align:right;font-size:12px;color:var(--mut);white-space:nowrap}
+.stats b{color:var(--tx);font-size:17px}
+.bar{height:4px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}.bar>div{height:100%;background:var(--acc);width:0;transition:width .3s}
+.sub{font-size:12px;color:var(--mut);margin-top:4px;display:flex;justify-content:space-between;gap:8px}
+main{max-width:860px;margin:0 auto;padding:12px;display:grid;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+h3{margin:0 0 10px;font-size:15px}
+.row{display:flex;gap:8px;align-items:center}
+input{font:inherit;width:100%;font-size:17px;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0b100d;color:var(--tx)}
+input:focus{outline:2px solid var(--acc);border-color:transparent}
+button{font:inherit;font-size:15px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#223029;color:var(--tx);cursor:pointer;white-space:nowrap}
+button:active{transform:scale(.98)}
+button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:700}
+button.sm{padding:8px 11px;font-size:13px;border-radius:10px}
+button.danger{color:#ff8a8a}
+button:disabled{opacity:.4}
+.mut{color:var(--mut);font-size:13px}
+/* câmera */
+#camWrap{position:relative;width:100%;max-width:440px;margin:0 auto;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:#000}
+#camWrap video{width:100%;height:100%;object-fit:cover}
+#camWrap .frame{position:absolute;inset:16%;border:3px solid var(--acc);border-radius:16px;box-shadow:0 0 0 999px #0006}
+#camWrap .hint{position:absolute;bottom:10px;left:0;right:0;text-align:center;font-size:13px;color:#fff;text-shadow:0 1px 3px #000}
+#camOff{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:absolute;inset:0}
+/* resultado */
+#result{border-radius:14px;padding:18px}
+#result.ok{background:var(--ok)}#result.warn{background:var(--warn);color:#111}#result.err{background:var(--err)}
+.big{font-size:30px;font-weight:800;line-height:1.1}
+.name{font-size:21px;font-weight:700;margin-top:6px;word-break:break-word}
+.meta{font-size:14px;margin-top:8px;line-height:1.5;opacity:.95}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;background:rgba(0,0,0,.25);font-weight:700;font-size:13px;margin-right:4px}
+.tag.vip{background:#111;color:#f5c542}
+#flash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+#flash.ok{background:var(--ok)}#flash.warn{background:var(--warn);color:#111}#flash.err{background:var(--err)}
+#flash .big{font-size:clamp(40px,12vw,84px)}#flash .name{font-size:clamp(22px,6vw,40px)}#flash .meta{font-size:16px}
+#flash .tap{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));font-size:13px;opacity:.8}
+/* listas (cards no celular) */
+.list{display:grid;gap:8px}
+.it{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#121a16}
+.it .n{font-weight:600;word-break:break-word}
+.it .d{font-size:12px;color:var(--mut);grid-column:1}
+.it .a{grid-row:1/span 2;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pill{padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+.p-ok{background:#1fa35b33;color:#5fe39a}.p-in{background:#e0a40033;color:#ffd256}.p-bad{background:#d23a3a33;color:#ff8a8a}
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;background:#0b100d;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;border-radius:0;background:none;height:var(--nav);color:var(--mut);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+nav button span{font-size:20px;line-height:1}
+nav button.on{color:var(--acc)}
+/* login */
+#login{max-width:420px;margin:8vh auto;padding:16px}
+#login .card{display:grid;gap:10px}
+.banner{background:#e0a40022;border:1px solid #e0a40066;color:#ffd256;border-radius:12px;padding:10px 12px;font-size:13px}
+.banner.err{background:#d23a3a22;border-color:#d23a3a66;color:#ff9a9a}
+@media(min-width:760px){.big{font-size:38px}.name{font-size:26px}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<section id="login" class="hide">
+  <div class="card">
+    <h2 style="margin:0" id="lTitle">Validador de Ingressos</h2>
+    <div id="demoNote" class="banner hide">MODO DEMO — Firebase não configurado. Sincroniza só entre abas deste navegador. Qualquer e-mail/senha entra; use o e-mail admin do config.js para carregar a base.</div>
+    <input id="lEmail" type="email" placeholder="E-mail" autocomplete="username">
+    <input id="lPass" type="password" placeholder="Senha" autocomplete="current-password">
+    <input id="lDev" type="text" placeholder="Nome deste aparelho (ex.: Portaria 3 - Ana)">
+    <button class="pri" id="lBtn">Entrar</button>
+    <div id="lErr" class="banner err hide"></div>
+  </div>
+</section>
+
+<!-- APP -->
+<div id="app" class="hide">
+<header>
+  <div class="hrow">
+    <span class="dot" id="dot" title="conexão"></span>
+    <h1 id="title">Validador</h1>
+    <div class="stats"><b id="sIn">0</b> / <span id="sTot">0</span><br><span id="sPct">0%</span> entraram</div>
+  </div>
+  <div class="bar"><div id="pbar"></div></div>
+  <div class="sub"><span id="devLbl"></span><span id="connLbl">conectando…</span></div>
+</header>
+
+<main>
+  <div id="noBase" class="banner hide">Nenhuma base carregada ainda. O admin precisa carregar o Excel na aba <b>Admin</b>.</div>
+
+  <!-- VALIDAR -->
+  <section id="tab-val" class="tab" style="display:grid;gap:12px">
+    <div class="card" style="display:grid;gap:10px">
+      <div id="camWrap">
+        <video id="video" playsinline muted class="hide"></video>
+        <div class="frame hide" id="frame"></div>
+        <div class="hint hide" id="camHint">Aponte para o QR code</div>
+        <div id="camOff"><button class="pri" id="camStart" style="font-size:17px;padding:16px 22px">📷 Abrir câmera</button><span class="mut">ou use o campo abaixo / leitor USB</span></div>
+      </div>
+      <div class="row">
+        <input id="code" type="text" placeholder="Código do ingresso" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="go">
+        <button class="pri" id="go">OK</button>
+      </div>
+      <button id="camStop" class="sm hide">Fechar câmera</button>
+    </div>
+    <div id="result" class="hide"></div>
+    <div class="card hide" id="groupCard">
+      <h3 id="groupTitle"></h3>
+      <button class="pri" id="allBtn" style="width:100%;margin-bottom:10px"></button>
+      <div class="list" id="groupList"></div>
+    </div>
+  </section>
+
+  <!-- BUSCAR -->
+  <section id="tab-bus" class="tab hide">
+    <div class="card">
+      <h3>Buscar por nome, e-mail, pedido ou código</h3>
+      <input id="search" type="search" placeholder="mín. 3 letras" autocomplete="off">
+      <div class="list" id="searchList" style="margin-top:10px"></div>
+    </div>
+  </section>
+
+  <!-- ENTRADAS -->
+  <section id="tab-log" class="tab hide">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">Entradas (todas as portarias)</h3><button class="sm" id="expBtn">⬇ CSV</button></div>
+      <div id="perDev" class="mut" style="margin-bottom:10px"></div>
+      <div class="list" id="logList"></div>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="tab-adm" class="tab hide">
+    <div class="card" style="display:grid;gap:10px">
+      <h3 style="margin:0">Base de ingressos</h3>
+      <div class="mut" id="baseInfo">—</div>
+      <label class="mut">Carregar Excel/CSV do Sympla (substitui a base para todos os aparelhos):</label>
+      <input type="file" id="file" accept=".xlsx,.xls,.csv" style="font-size:14px">
+      <div id="upMsg" class="mut"></div>
+      <hr style="border:0;border-top:1px solid var(--line);width:100%">
+      <button class="danger" id="resetBtn">Zerar TODAS as entradas</button>
+      <button id="logoutBtn">Sair deste aparelho</button>
+    </div>
+  </section>
+  <section id="tab-cfg" class="tab hide">
+    <div class="card" style="display:grid;gap:10px">
+      <div class="mut" id="whoami"></div>
+      <button id="logoutBtn2">Sair deste aparelho</button>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="val" class="on"><span>▣</span>Validar</button>
+  <button data-tab="bus"><span>⌕</span>Buscar</button>
+  <button data-tab="log"><span>☰</span>Entradas</button>
+  <button data-tab="adm" id="navAdm" class="hide"><span>⚙</span>Admin</button>
+  <button data-tab="cfg" id="navCfg"><span>⚙</span>Conta</button>
+</nav>
+</div>
+
+<div id="flash" class="hide"></div>
+<canvas id="canvas" class="hide"></canvas>
+
+<script src="xlsx.full.min.js"></script>
+<script src="jsQR.js"></script>
+<script src="config.js"></script>
+<script type="module">
+const CFG=window.APP_CONFIG||{};
+const SDK=window.FIREBASE_SDK_BASE||'https://www.gstatic.com/firebasejs/10.14.1';
+const DEMO=!CFG.firebase||!CFG.firebase.apiKey||CFG.firebase.apiKey==='COLE_AQUI';
+const ADMIN=String(CFG.adminEmail||'').toLowerCase();
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
+const normCode=s=>String(s??'').toUpperCase().replace(/\s+/g,'').trim();
+const keyOf=c=>c.replace(/[.#$\[\]\/]/g,'_');
+const fmtT=ms=>new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+document.title=CFG.eventName||'Validador';$('lTitle').textContent=$('title').textContent=CFG.eventName||'Validador';
+
+// ================= BACKEND =================
+// Interface: login, logout, onUser, start(onTickets,onCheckins,onConn), checkin(key,data), undo(key), upload(tickets,meta), reset()
+let B;
+if(DEMO){
+  $('demoNote').classList.remove('hide');
+  const K='demo_db_v2';const read=()=>ls.get(K)||{tickets:{},checkins:{},meta:null};
+  let cbs=null,user=ls.get('demo_user');
+  const emit=()=>{if(!cbs)return;const d=read();cbs.t(d.tickets||{},d.meta);cbs.c(d.checkins||{})};
+  window.addEventListener('storage',e=>{if(e.key===K)emit()});
+  const write=f=>{const d=read();f(d);ls.set(K,d);emit()};
+  B={
+    async login(e){user={email:e};ls.set('demo_user',user);return user},
+    async logout(){user=null;localStorage.removeItem('demo_user')},
+    onUser(cb){setTimeout(()=>cb(user),0)},
+    start(t,c,conn){cbs={t,c};conn(true);emit()},
+    async checkin(k,data){let res;write(d=>{d.checkins=d.checkins||{};if(d.checkins[k])res={ok:false,existing:d.checkins[k]};else{d.checkins[k]=data;res={ok:true}}});return res},
+    async undo(k){write(d=>{delete d.checkins[k]})},
+    async upload(t,m){write(d=>{d.tickets=t;d.meta=m})},
+    async reset(){write(d=>{d.checkins={}})}
+  };
+}else{
+  const [{initializeApp},A,D]=await Promise.all([import(SDK+'/firebase-app.js'),import(SDK+'/firebase-auth.js'),import(SDK+'/firebase-database.js')]);
+  const app=initializeApp(CFG.firebase);const auth=A.getAuth(app);const db=D.getDatabase(app);
+  if(new URLSearchParams(location.search).has('emu')){A.connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});D.connectDatabaseEmulator(db,'127.0.0.1',9000)}
+  let online=false;
+  B={
+    async login(e,p){return (await A.signInWithEmailAndPassword(auth,e,p)).user},
+    async logout(){await A.signOut(auth)},
+    onUser(cb){A.onAuthStateChanged(auth,cb)},
+    start(t,c,conn){
+      let meta=null,tk=null;
+      D.onValue(D.ref(db,'meta'),s=>{meta=s.val();if(tk)t(tk,meta)});
+      D.onValue(D.ref(db,'tickets'),s=>{tk=s.val()||{};t(tk,meta)});
+      D.onValue(D.ref(db,'checkins'),s=>c(s.val()||{}));
+      D.onValue(D.ref(db,'.info/connected'),s=>{online=!!s.val();conn(online)});
+    },
+    async checkin(k,data,cache){
+      const r=D.ref(db,'checkins/'+k);
+      if(!online){ // sem internet: decide pelo cache local e enfileira a gravação
+        if(cache[k])return{ok:false,existing:cache[k]};
+        D.set(r,data).catch(()=>{});return{ok:true,offline:true};
+      }
+      const tx=D.runTransaction(r,cur=>cur?undefined:data,{applyLocally:false})
+        .then(res=>res.committed?{ok:true}:{ok:false,existing:res.snapshot.val()});
+      const to=new Promise(res=>setTimeout(()=>res(null),6000));
+      const out=await Promise.race([tx,to]);
+      if(out)return out;
+      if(cache[k])return{ok:false,existing:cache[k]};
+      return{ok:true,offline:true}; // transação continua e grava quando a conexão voltar
+    },
+    async undo(k){await D.remove(D.ref(db,'checkins/'+k))},
+    async upload(t,m){await D.set(D.ref(db,'tickets'),t);await D.set(D.ref(db,'meta'),m)},
+    async reset(){await D.set(D.ref(db,'checkins'),null)}
+  };
+}
+
+// ================= ESTADO =================
+let T={},byBuyer=new Map(),checkins={},meta=null,device=ls.get('device')||'',me=null,curT=null,lastCode='',lastCodeT=0;
+const VALID=new Set(['aprovado','confirmado','pago','ativo','']);
+const isValid=t=>VALID.has(norm(t.s));
+
+function setTickets(t,m){
+  T=t||{};meta=m;ls.set('cache_tickets',{T,meta});
+  byBuyer=new Map();
+  for(const [k,x] of Object.entries(T)){x.k=k;const b=norm(x.ec)||norm(x.c)||('p'+x.p);x._b=b;if(!byBuyer.has(b))byBuyer.set(b,[]);byBuyer.get(b).push(k)}
+  $('noBase').classList.toggle('hide',Object.keys(T).length>0);
+  $('baseInfo').textContent=meta?`${meta.name} · ${meta.count.toLocaleString('pt-BR')} ingressos · carregada ${new Date(meta.at).toLocaleString('pt-BR')} por ${meta.by}`:'Nenhuma base carregada';
+  refresh();
+}
+function setCheckins(c){checkins=c||{};ls.set('cache_checkins',checkins);refresh();if(curT)renderGroup(curT);if(!$('tab-bus').classList.contains('hide'))doSearch()}
+
+// ================= LOGIN =================
+$('lDev').value=device;
+$('lBtn').onclick=async()=>{
+  const e=$('lEmail').value.trim(),p=$('lPass').value,d=$('lDev').value.trim();
+  if(!d){showErr('Informe o nome do aparelho');return}
+  device=d;ls.set('device',d);$('lBtn').disabled=true;
+  try{await B.login(e,p);if(DEMO)boot({email:e})}catch(err){showErr('Login falhou: '+(err.code||err.message))}
+  $('lBtn').disabled=false;
+};
+[$('lPass'),$('lDev')].forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')$('lBtn').click()}));
+function showErr(m){$('lErr').textContent=m;$('lErr').classList.remove('hide')}
+let started=false;
+function boot(u){
+  me=u;
+  if(!u||!device){$('login').classList.remove('hide');$('app').classList.add('hide');return}
+  $('login').classList.add('hide');$('app').classList.remove('hide');
+  const adm=(u.email||'').toLowerCase()===ADMIN;
+  $('navAdm').classList.toggle('hide',!adm);$('navCfg').classList.toggle('hide',adm);
+  $('devLbl').textContent=device+(adm?' · admin':'');$('whoami').textContent=`${u.email} · ${device}`;
+  if(started)return;started=true;
+  const c=ls.get('cache_tickets');if(c&&c.T)setTickets(c.T,c.meta);
+  const cc=ls.get('cache_checkins');if(cc)setCheckins(cc);
+  B.start(setTickets,setCheckins,on=>{$('dot').classList.toggle('on',on);$('connLbl').textContent=on?'online · sincronizado':'SEM CONEXÃO — salvando local'});
+}
+B.onUser(u=>boot(u));
+const logout=async()=>{if(!confirm('Sair deste aparelho?'))return;await B.logout();location.reload()};
+$('logoutBtn').onclick=logout;$('logoutBtn2').onclick=logout;
+
+// ================= VALIDAÇÃO =================
+function resolve(raw){
+  const c=normCode(raw);if(T[keyOf(c)])return keyOf(c);
+  for(const tok of String(raw).toUpperCase().split(/[^A-Z0-9-]+/))if(tok&&T[keyOf(tok)])return keyOf(tok);
+  return null;
+}
+const entryData=via=>({t:Date.now(),d:device,u:me?.email||'',v:via});
+
+let busy=false;
+async function validate(raw,via){
+  raw=String(raw||'').trim();if(!raw||busy)return;
+  const k=resolve(raw);
+  if(!k){result('err','NÃO ENCONTRADO',esc(raw),'Código não existe na base. Use a aba Buscar.');$('groupCard').classList.add('hide');curT=null;return}
+  const t=T[k];
+  const vip=/vip/i.test(t.t)?'<span class="tag vip">VIP</span>':'';
+  const meta=`<span class="tag">${esc(t.t)}</span>${vip}<br>Pedido ${esc(t.p)} · ${esc(t.k)}${norm(t.c)&&norm(t.c)!==norm(t.n)?'<br>Comprador: '+esc(t.c):''}`;
+  if(!isValid(t)){result('err','BLOQUEADO',esc(t.n),`${meta}<br><b>Status: ${esc(t.s)}</b>`)}
+  else{
+    busy=true;let r;try{r=await B.checkin(k,entryData(via),checkins)}catch(err){busy=false;result('err','ERRO',esc(t.n),'Não gravou: '+esc(err.code||err.message)+'<br>Verifique login/conexão e tente de novo.');return}busy=false;
+    if(r.ok)result('ok','LIBERADO',esc(t.n),meta+(r.offline?'<br><b>⚠ sem conexão — sincroniza quando voltar</b>':''));
+    else{const e=r.existing||{};result('warn','JÁ ENTROU',esc(t.n),`${meta}<br>Entrada às <b>${fmtT(e.t)}</b> · ${esc(e.d)}`)}
+  }
+  renderGroup(t);
+}
+function result(cls,big,name,meta){
+  const R=$('result');R.className=cls;R.innerHTML=`<div class="big">${big}</div><div class="name">${name}</div><div class="meta">${meta}</div>`;
+  const F=$('flash');F.className=cls;F.innerHTML=`<div class="big">${big}</div><div class="name">${name}</div><div class="meta">${meta}</div><div class="tap">toque para fechar</div>`;
+  clearTimeout(F._t);F._t=setTimeout(()=>F.classList.add('hide'),cls==='ok'?1600:3200);
+  beep(cls==='ok');
+}
+$('flash').onclick=()=>$('flash').classList.add('hide');
+
+function situ(t){if(!isValid(t))return`<span class="pill p-bad">${esc(t.s)}</span>`;const c=checkins[t.k];return c?`<span class="pill p-in">Entrou ${fmtT(c.t).slice(0,5)}</span>`:'<span class="pill p-ok">Pendente</span>'}
+function itemHTML(t){
+  const pend=isValid(t)&&!checkins[t.k];
+  return`<div class="it"><div class="n">${esc(t.n)}</div><div class="a">${situ(t)}${pend?`<button class="sm" data-lib="${esc(t.k)}">Liberar</button>`:''}</div><div class="d">${esc(t.k)} · ${esc(t.t)} · Pedido ${esc(t.p)}${norm(t.c)&&norm(t.c)!==norm(t.n)?' · comprador: '+esc(t.c):''}</div></div>`;
+}
+function renderGroup(t){
+  curT=t;const ks=(byBuyer.get(t._b)||[]).filter(k=>k!==t.k);
+  if(!ks.length){$('groupCard').classList.add('hide');return}
+  const peds=new Set(byBuyer.get(t._b).map(k=>T[k].p));
+  const pend=ks.filter(k=>isValid(T[k])&&!checkins[k]).length;
+  $('groupTitle').textContent=`Mesmo comprador: +${ks.length} ingresso(s) em ${peds.size} pedido(s)`;
+  $('allBtn').textContent=pend?`Liberar ${pend} pendente(s) junto`:'Nenhum pendente';$('allBtn').disabled=!pend;
+  $('groupList').innerHTML=ks.map(k=>itemHTML(T[k])).join('');
+  $('groupCard').classList.remove('hide');
+}
+$('allBtn').onclick=async()=>{
+  const ks=(byBuyer.get(curT._b)||[]).filter(k=>isValid(T[k])&&!checkins[k]);let ok=0,ja=0;
+  $('allBtn').disabled=true;
+  try{for(const k of ks){const r=await B.checkin(k,entryData('grupo'),checkins);r.ok?ok++:ja++}}catch(err){alert('Erro: '+(err.code||err.message))}
+  beep(true);if(ja)alert(`${ok} liberado(s). ${ja} já tinham entrado por outra portaria.`);
+};
+document.addEventListener('click',async e=>{
+  const k=e.target.dataset?.lib;if(!k)return;e.target.disabled=true;
+  let r;try{r=await B.checkin(k,entryData('manual'),checkins)}catch(err){alert('Erro: '+(err.code||err.message));e.target.disabled=false;return}
+  if(r.ok)beep(true);else{beep(false);alert(`Já entrou às ${fmtT(r.existing?.t)} · ${r.existing?.d||''}`)}
+});
+$('code').addEventListener('keydown',e=>{if(e.key==='Enter'){validate(e.target.value,'leitor');e.target.value=''}});
+$('go').onclick=()=>{validate($('code').value,'digitado');$('code').value=''};
+
+// ================= ABAS / LISTAS =================
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tab').forEach(s=>s.classList.add('hide'));$('tab-'+b.dataset.tab).classList.remove('hide');
+  if(b.dataset.tab==='log')renderLog();if(b.dataset.tab==='bus')$('search').focus();
+  window.scrollTo(0,0);
+});
+function refresh(){
+  const all=Object.values(T),tot=all.filter(isValid).length,inn=Object.keys(checkins).filter(k=>T[k]).length;
+  $('sIn').textContent=inn.toLocaleString('pt-BR');$('sTot').textContent=tot.toLocaleString('pt-BR');
+  const p=tot?inn/tot*100:0;$('sPct').textContent=p.toFixed(1)+'%';$('pbar').style.width=p+'%';
+  if(!$('tab-log').classList.contains('hide'))renderLog();
+}
+function renderLog(){
+  const es=Object.entries(checkins).sort((a,b)=>b[1].t-a[1].t);
+  const per={};es.forEach(([,v])=>per[v.d]=(per[v.d]||0)+1);
+  $('perDev').innerHTML=Object.entries(per).sort((a,b)=>b[1]-a[1]).map(([d,n])=>`${esc(d)}: <b>${n}</b>`).join(' · ')||'Nenhuma entrada ainda';
+  $('logList').innerHTML=es.slice(0,100).map(([k,v])=>{const t=T[k]||{};return`<div class="it"><div class="n">${esc(t.n||k)}</div><div class="a"><span class="pill p-in">${fmtT(v.t)}</span><button class="sm danger" data-undo="${esc(k)}">desfazer</button></div><div class="d">${esc(k)} · ${esc(t.t)} · ${esc(v.d)} · ${esc(v.v)}</div></div>`}).join('');
+}
+document.addEventListener('click',async e=>{const k=e.target.dataset?.undo;if(!k)return;if(confirm(`Desfazer entrada de ${T[k]?.n||k}?`))await B.undo(k)});
+function doSearch(){
+  const q=norm($('search').value);if(q.length<3){$('searchList').innerHTML='';return}
+  const qc=q.toUpperCase(),res=[];
+  for(const t of Object.values(T)){if(norm(t.n).includes(q)||norm(t.e).includes(q)||norm(t.c).includes(q)||norm(t.ec).includes(q)||String(t.p)===q||t.k.includes(qc)){res.push(t);if(res.length>=30)break}}
+  $('searchList').innerHTML=res.length?res.map(itemHTML).join(''):'<div class="mut">Nada encontrado</div>';
+}
+$('search').oninput=doSearch;
+$('expBtn').onclick=()=>{
+  const L=[['codigo','nome','tipo','pedido','comprador','horario','aparelho','usuario','via']];
+  Object.entries(checkins).sort((a,b)=>a[1].t-b[1].t).forEach(([k,v])=>{const t=T[k]||{};L.push([k,t.n,t.t,t.p,t.c,new Date(v.t).toLocaleString('pt-BR'),v.d,v.u,v.v])});
+  const csv='﻿'+L.map(l=>l.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`entradas_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.csv`;a.click();
+};
+
+// ================= ADMIN: carregar base =================
+const COLS={k:['codigo do ingresso','codigo','numero do ingresso','ingresso','ticket'],p:['n do pedido','no do pedido','numero do pedido','pedido','order'],t:['tipo de ingresso','tipo','categoria','lote'],s:['status','situacao'],n:['nome do participante','participante','nome'],e:['e-mail do participante','email do participante','e-mail','email'],c:['comprador','nome do comprador'],ec:['e-mail do comprador','email do comprador']};
+function mapCols(hd){const h=hd.map(x=>norm(x).replace(/[º°]/g,'').replace(/\s+/g,' ')),m={},used=new Set();
+  for(const [f,alts] of Object.entries(COLS)){let i=-1;for(const a of alts){i=h.findIndex((x,j)=>x===a&&!used.has(j));if(i>=0)break}
+    if(i<0)for(const a of alts){i=h.findIndex((x,j)=>x.includes(a)&&!used.has(j));if(i>=0)break}
+    if(i>=0){m[f]=i;used.add(i)}}return m}
+$('file').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();$('upMsg').textContent='Lendo…';
+  r.onload=async ev=>{try{
+    const wb=XLSX.read(ev.target.result,{type:'array',cellDates:true});
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:false});
+    const hi=rows.findIndex(r=>r.filter(String).length>=2),m=mapCols(rows[hi]);
+    if(m.k==null){$('upMsg').textContent='Não achei a coluna de código. Cabeçalhos: '+rows[hi].join(' | ');return}
+    const out={};let dup=0;
+    for(const r of rows.slice(hi+1)){const c=normCode(r[m.k]);if(!c)continue;const k=keyOf(c);if(out[k])dup++;
+      const o={};for(const f of ['p','t','s','n','e','c','ec'])o[f]=m[f]!=null?String(r[m[f]]).trim():'';out[k]=o}
+    const n=Object.keys(out).length;
+    if(!confirm(`Carregar ${n} ingressos para TODOS os aparelhos?${dup?`\n(${dup} códigos duplicados ignorados)`:''}`)){$('upMsg').textContent='Cancelado';return}
+    $('upMsg').textContent='Enviando…';
+    await B.upload(out,{name:f.name,count:n,at:Date.now(),by:me?.email||''});
+    $('upMsg').textContent=`✔ ${n} ingressos carregados. Colunas detectadas: ${Object.entries(m).map(([k,i])=>k+'='+rows[hi][i]).join(', ')}`;
+  }catch(err){$('upMsg').textContent='Erro: '+(err.code||err.message)}e.target.value=''};
+  r.readAsArrayBuffer(f);
+};
+$('resetBtn').onclick=async()=>{if(prompt('Apaga TODAS as entradas de TODOS os aparelhos. Digite ZERAR:')==='ZERAR'){await B.reset();$('upMsg').textContent='Entradas zeradas.'}};
+
+// ================= CÂMERA =================
+let stream=null,detector=null,paused=0;
+if('BarcodeDetector' in window){try{detector=new BarcodeDetector({formats:['qr_code']})}catch(e){}}
+$('camStart').onclick=async()=>{
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:1280}},audio:false})}
+  catch(e){alert('Não foi possível abrir a câmera: '+e.message);return}
+  const v=$('video');v.srcObject=stream;await v.play();
+  ['video','frame','camHint','camStop'].forEach(i=>$(i).classList.remove('hide'));$('camOff').classList.add('hide');
+  initAudio();scan();
+};
+$('camStop').onclick=()=>{if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;['video','frame','camHint','camStop'].forEach(i=>$(i).classList.add('hide'));$('camOff').classList.remove('hide')};
+async function scan(){
+  if(!stream)return;const v=$('video');
+  if(v.readyState>=2&&Date.now()>paused&&!busy){
+    let txt=null;
+    try{
+      if(detector){const r=await detector.detect(v);if(r[0])txt=r[0].rawValue}
+      else{const c=$('canvas'),s=Math.min(v.videoWidth,v.videoHeight),w=600;c.width=c.height=w;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(v,(v.videoWidth-s)/2,(v.videoHeight-s)/2,s,s,0,0,w,w);const q=jsQR(x.getImageData(0,0,w,w).data,w,w,{inversionAttempts:'dontInvert'});if(q)txt=q.data}
+    }catch(e){}
+    const now=Date.now();
+    if(txt&&!(txt===lastCode&&now-lastCodeT<5000)){lastCode=txt;lastCodeT=now;paused=now+1500;validate(txt,'camera')}
+  }
+  setTimeout(scan,100);
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)$('camStop').click()});
+
+// ================= SOM =================
+let ac=null;function initAudio(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}}
+document.addEventListener('pointerdown',initAudio,{once:true});
+function beep(ok){try{initAudio();const o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=ok?880:220;o.type=ok?'sine':'square';g.gain.value=.2;o.start();o.stop(ac.currentTime+(ok?.15:.5))}catch(e){}if(navigator.vibrate)navigator.vibrate(ok?80:[250,100,250])}
+</script>
+</body>
+</html>
