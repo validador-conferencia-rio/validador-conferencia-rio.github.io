@@ -3,34 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0f1512">
+<meta name="theme-color" content="#000000">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="logo.png">
 <meta name="robots" content="noindex">
-<title>Validador de Ingressos</title>
+<title>Validador dos Boas-Vindas · Conferência Rio</title>
 <style>
-:root{--bg:#0f1512;--card:#18211c;--line:#2a3830;--tx:#e9efe9;--mut:#93a39a;--ok:#1fa35b;--warn:#e0a400;--err:#d23a3a;--acc:#b6d334;--nav:64px}
+:root{--bg:#000;--card:#0b0b0b;--line:#262626;--tx:#fff;--mut:#9a9a9a;--ok:#1fa35b;--warn:#e0a400;--err:#d23a3a;--acc:#fff;--nav:64px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:Montserrat,system-ui,sans-serif}
 body{padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom))}
 .hide{display:none!important}
 header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 14px calc(8px);padding-top:max(10px,env(safe-area-inset-top))}
 .hrow{display:flex;align-items:center;gap:10px}
 .hrow h1{font-size:16px;margin:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{width:10px;height:10px;border-radius:50%;background:var(--err);flex:none;box-shadow:0 0 0 3px #d23a3a33}
+.hlogo{height:22px;flex:none}
+.lhead{text-align:center;display:grid;gap:14px;justify-items:center;margin:10px 0 8px}
+.lhead img{width:min(260px,70%)}
+.lhead .t{font-size:13px;letter-spacing:.32em;text-transform:uppercase;font-weight:600}
+.lhead .w{font-size:22px;font-weight:800;letter-spacing:.02em}
+.credit{position:fixed;left:0;right:0;bottom:calc(14px + env(safe-area-inset-bottom));text-align:center;font-size:12px;color:#777;letter-spacing:.04em}
+.credit b{color:#bbb;font-weight:600}
 .dot.on{background:var(--ok);box-shadow:0 0 0 3px #1fa35b33}
 .stats{margin-left:auto;text-align:right;font-size:12px;color:var(--mut);white-space:nowrap}
 .stats b{color:var(--tx);font-size:17px}
-.bar{height:4px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}.bar>div{height:100%;background:var(--acc);width:0;transition:width .3s}
+.bar{height:4px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}.bar>div{height:100%;background:#fff;width:0;transition:width .3s}
 .sub{font-size:12px;color:var(--mut);margin-top:4px;display:flex;justify-content:space-between;gap:8px}
 main{max-width:860px;margin:0 auto;padding:12px;display:grid;gap:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
 h3{margin:0 0 10px;font-size:15px}
 .row{display:flex;gap:8px;align-items:center}
-input{font:inherit;width:100%;font-size:17px;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#0b100d;color:var(--tx)}
+input{font:inherit;width:100%;font-size:17px;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:#111;color:var(--tx)}
 input:focus{outline:2px solid var(--acc);border-color:transparent}
-button{font:inherit;font-size:15px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#223029;color:var(--tx);cursor:pointer;white-space:nowrap}
+button{font:inherit;font-size:15px;font-weight:500;padding:12px 18px;border-radius:999px;border:1px solid #3a3a3a;background:#000;color:var(--tx);cursor:pointer;white-space:nowrap}
 button:active{transform:scale(.98)}
-button.pri{background:var(--acc);color:#111;border-color:var(--acc);font-weight:700}
-button.sm{padding:8px 11px;font-size:13px;border-radius:10px}
+button.pri{background:#fff;color:#000;border-color:#fff;font-weight:700}
+button.sm{padding:7px 13px;font-size:13px}
 button.danger{color:#ff8a8a}
 button:disabled{opacity:.4}
 .mut{color:var(--mut);font-size:13px}
@@ -54,20 +64,20 @@ button:disabled{opacity:.4}
 #flash .tap{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));font-size:13px;opacity:.8}
 /* listas (cards no celular) */
 .list{display:grid;gap:8px}
-.it{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#121a16}
+.it{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#000}
 .it .n{font-weight:600;word-break:break-word}
 .it .d{font-size:12px;color:var(--mut);grid-column:1}
 .it .a{grid-row:1/span 2;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .pill{padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
 .p-ok{background:#1fa35b33;color:#5fe39a}.p-in{background:#e0a40033;color:#ffd256}.p-bad{background:#d23a3a33;color:#ff8a8a}
 /* nav */
-nav{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;background:#0b100d;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;border:0;border-radius:0;background:none;height:var(--nav);color:var(--mut);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;background:#000;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;border-radius:0;font-weight:500;background:none;height:var(--nav);color:var(--mut);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 nav button span{font-size:20px;line-height:1}
 nav button.on{color:var(--acc)}
 /* login */
-#login{max-width:420px;margin:8vh auto;padding:16px}
-#login .card{display:grid;gap:10px}
+#login{max-width:420px;margin:6vh auto;padding:16px 16px 60px}
+#login .card{display:grid;gap:10px;background:#000;border-color:#222}
 .banner{background:#e0a40022;border:1px solid #e0a40066;color:#ffd256;border-radius:12px;padding:10px 12px;font-size:13px}
 .banner.err{background:#d23a3a22;border-color:#d23a3a66;color:#ff9a9a}
 @media(min-width:760px){.big{font-size:38px}.name{font-size:26px}}
@@ -78,7 +88,7 @@ nav button.on{color:var(--acc)}
 <!-- LOGIN -->
 <section id="login" class="hide">
   <div class="card">
-    <h2 style="margin:0" id="lTitle">Validador de Ingressos</h2>
+    <div class="lhead"><img src="logo.png" alt="Bola de Neve Church"><div class="w">Validador dos Boas-Vindas</div><div class="t" id="lTitle">Conferência Rio</div></div>
     <div id="demoNote" class="banner hide">MODO DEMO — Firebase não configurado. Sincroniza só entre abas deste navegador. Qualquer e-mail/senha entra; use o e-mail admin do config.js para carregar a base.</div>
     <input id="lEmail" type="email" placeholder="E-mail" autocomplete="username">
     <input id="lPass" type="password" placeholder="Senha" autocomplete="current-password">
@@ -86,12 +96,14 @@ nav button.on{color:var(--acc)}
     <button class="pri" id="lBtn">Entrar</button>
     <div id="lErr" class="banner err hide"></div>
   </div>
+  <div class="credit">criado por <b>João Vittor Farias</b></div>
 </section>
 
 <!-- APP -->
 <div id="app" class="hide">
 <header>
   <div class="hrow">
+    <img src="logo.png" class="hlogo" alt="">
     <span class="dot" id="dot" title="conexão"></span>
     <h1 id="title">Validador</h1>
     <div class="stats"><b id="sIn">0</b> / <span id="sTot">0</span><br><span id="sPct">0%</span> entraram</div>
@@ -192,7 +204,7 @@ const normCode=s=>String(s??'').toUpperCase().replace(/\s+/g,'').trim();
 const keyOf=c=>c.replace(/[.#$\[\]\/]/g,'_');
 const fmtT=ms=>new Date(ms).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
 const ls={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-document.title=CFG.eventName||'Validador';$('lTitle').textContent=$('title').textContent=CFG.eventName||'Validador';
+document.title=CFG.eventName||'Validador';$('title').textContent='Boas-Vindas';if(CFG.eventSubtitle)$('lTitle').textContent=CFG.eventSubtitle;
 
 // ================= BACKEND =================
 // Interface: login, logout, onUser, start(onTickets,onCheckins,onConn), checkin(key,data), undo(key), upload(tickets,meta), reset()

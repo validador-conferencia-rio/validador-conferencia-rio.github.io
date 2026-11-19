@@ -5,7 +5,8 @@
 //  está no login + regras do Realtime Database.
 // ============================================================
 window.APP_CONFIG = {
-  eventName: "Validador de Ingressos",
+  eventName: "Validador dos Boas-Vindas · Conferência Rio",
+  eventSubtitle: "Conferência Rio",
 
   // e-mail do login que pode carregar a base e zerar entradas
   adminEmail: "admin@validador.app",
