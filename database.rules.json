@@ -19,6 +19,12 @@
         ".write": "auth != null && !data.exists()",
         ".validate": "newData.hasChildren(['a', 'k', 't', 'd', 'u']) && newData.child('u').val() === auth.token.email && newData.child('t').val() === now"
       }
+    },
+    "presence": {
+      "$sid": {
+        ".write": "auth != null && $sid.beginsWith(auth.uid + '_')",
+        ".validate": "!newData.exists() || (newData.hasChildren(['u', 'd', 't']) && newData.child('u').val() === auth.token.email)"
+      }
     }
   }
 }

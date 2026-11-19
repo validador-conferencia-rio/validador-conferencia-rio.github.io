@@ -62,6 +62,12 @@ button:disabled{opacity:.4}
 #flash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
 #flash.ok{background:var(--ok)}#flash.warn{background:var(--warn);color:#111}#flash.err{background:var(--err)}
 #flash .big{font-size:clamp(40px,12vw,84px)}#flash .name{font-size:clamp(22px,6vw,40px)}#flash .meta{font-size:16px}
+/* equipe */
+.team{padding:3px 10px;font-size:12px;border-radius:999px;background:#0f2a1b;border-color:#1fa35b66;color:#bfeccf;font-weight:500}
+.sub{align-items:center}
+#team{position:fixed;inset:0;z-index:55;background:#000c;display:flex;align-items:flex-start;justify-content:center;padding:70px 12px 12px}
+#team .sheet{background:#0b0b0b;border:1px solid #2a2a2a;border-radius:16px;padding:16px;width:min(560px,100%);max-height:80vh;overflow:auto}
+.on-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#1fa35b;margin-right:6px;box-shadow:0 0 0 3px #1fa35b33}
 /* histórico */
 .chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chips button{flex:none}.chips button{padding:7px 12px;font-size:13px}.chips button.on{background:#fff;color:#000;border-color:#fff;font-weight:700}
 .evt{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
@@ -92,6 +98,7 @@ nav button.on{color:var(--acc)}
 .banner.err{background:#d23a3a22;border-color:#d23a3a66;color:#ff9a9a}
 #tab-val{display:grid;gap:12px}.rcol{display:grid;gap:12px;align-content:start}
 .wrap{max-width:1180px;margin:0 auto}
+@media(max-width:420px){#connLbl{display:none}#devLbl{max-width:38vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 @media(max-width:360px){.hlogo{display:none}.stats b{font-size:15px}main{padding:8px}.card{padding:11px}.big{font-size:26px}}
 @media(min-width:760px){.big{font-size:38px}.name{font-size:26px}}
 @media(min-width:960px){main{max-width:1180px;padding:18px}#tab-val:not(.hide){grid-template-columns:minmax(340px,420px) 1fr;align-items:start}.list{grid-template-columns:1fr 1fr}#tab-bus .card,#tab-log .card{padding:18px}nav{justify-content:center}nav button{flex:0 0 150px}.hlogo{height:26px}}
@@ -125,7 +132,7 @@ nav button.on{color:var(--acc)}
     <div class="stats"><b id="sIn">0</b> / <span id="sTot">0</span><br><span id="sPct">0%</span> entraram</div>
   </div>
   <div class="bar"><div id="pbar"></div></div>
-  <div class="sub"><span id="devLbl"></span><span id="connLbl">conectando…</span></div>
+  <div class="sub"><span id="devLbl"></span><button id="teamBtn" class="team">👥 <b id="teamN">0</b> online</button><span id="connLbl">conectando…</span></div>
   </div>
 </header>
 
@@ -219,6 +226,7 @@ nav button.on{color:var(--acc)}
 
 <div id="flash" class="hide"></div>
 <div id="tk" class="hide"></div>
+<div id="team" class="hide"><div class="sheet"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Equipe online agora</h3><button class="sm" id="teamClose">Fechar</button></div><div class="mut" style="margin:6px 0 12px">Atualiza em tempo real. Quem fecha o app ou perde a internet sai da lista em até ~1 min.</div><div class="list" id="teamList"></div></div></div>
 <canvas id="canvas" class="hide"></canvas>
 
 <script src="xlsx.full.min.js"></script>
@@ -253,7 +261,12 @@ if(DEMO){
     async login(e){user={email:e};ls.set('demo_user',user);return user},
     async logout(){user=null;localStorage.removeItem('demo_user')},
     onUser(cb){setTimeout(()=>cb(user),0)},
-    start(t,c,conn,l){cbs={t,c,l};conn(true);emit()},
+    start(t,c,conn,l,pres){cbs={t,c,l};conn(true);emit();
+      const sid='S'+Math.random().toString(36).slice(2,8);
+      const beat=()=>{const P=ls.get('demo_pres')||{};P[sid]={u:user?.email||'',d:device,t:P[sid]?.t||Date.now(),hb:Date.now()};ls.set('demo_pres',P);push()};
+      const push=()=>{const P=ls.get('demo_pres')||{};const now=Date.now();pres&&pres(Object.fromEntries(Object.entries(P).filter(([,v])=>now-v.hb<15000)))};
+      window.addEventListener('storage',e=>{if(e.key==='demo_pres')push()});beat();setInterval(beat,5000);
+      window.addEventListener('beforeunload',()=>{const P=ls.get('demo_pres')||{};delete P[sid];ls.set('demo_pres',P)})},
     async log(e){write(d=>{d.log=d.log||{};d.log['L'+Date.now()+Math.random().toString(36).slice(2,6)]={...e,t:Date.now()}})},
     isOnline(){return true},
     async checkin(k,data){let res;write(d=>{d.checkins=d.checkins||{};if(d.checkins[k])res={ok:false,existing:d.checkins[k]};else{d.checkins[k]=data;res={ok:true}}});return res},
@@ -265,18 +278,21 @@ if(DEMO){
   const [{initializeApp},A,D]=await Promise.all([import(SDK+'/firebase-app.js'),import(SDK+'/firebase-auth.js'),import(SDK+'/firebase-database.js')]);
   const app=initializeApp(CFG.firebase);const auth=A.getAuth(app);const db=D.getDatabase(app);
   if(new URLSearchParams(location.search).has('emu')){A.connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});D.connectDatabaseEmulator(db,'127.0.0.1',9000)}
-  let online=false;
+  let online=false,presRef=null;
   B={
     async login(e,p){return (await A.signInWithEmailAndPassword(auth,e,p)).user},
-    async logout(){await A.signOut(auth)},
+    async logout(){try{if(presRef)await D.remove(presRef)}catch(e){}await A.signOut(auth)},
     onUser(cb){A.onAuthStateChanged(auth,cb)},
-    start(t,c,conn,l){
+    start(t,c,conn,l,pres){
       let meta=null,tk=null;
       D.onValue(D.ref(db,'meta'),s=>{meta=s.val();if(tk)t(tk,meta)});
       D.onValue(D.ref(db,'tickets'),s=>{tk=s.val()||{};t(tk,meta)});
       D.onValue(D.ref(db,'checkins'),s=>c(s.val()||{}));
       D.onValue(D.ref(db,'.info/connected'),s=>{online=!!s.val();conn(online)});
       if(l)D.onChildAdded(D.ref(db,'log'),s=>l({[s.key]:s.val()},false));
+      const u=auth.currentUser;presRef=D.ref(db,'presence/'+u.uid+'_'+Math.random().toString(36).slice(2,8));
+      D.onValue(D.ref(db,'.info/connected'),s=>{if(!s.val())return;D.onDisconnect(presRef).remove().then(()=>D.set(presRef,{u:u.email,d:device,t:D.serverTimestamp()})).catch(e=>console.warn('presence',e))});
+      if(pres)D.onValue(D.ref(db,'presence'),s=>pres(s.val()||{}));
     },
     log(e){return D.push(D.ref(db,'log'),{...e,t:D.serverTimestamp()})},
     isOnline(){return online},
@@ -313,7 +329,7 @@ function setTickets(t,m){
   $('baseInfo').textContent=meta?`${meta.name} · ${meta.count.toLocaleString('pt-BR')} ingressos · carregada ${new Date(meta.at).toLocaleString('pt-BR')} por ${meta.by}`:'Nenhuma base carregada';
   refresh();
 }
-function setCheckins(c){checkins=c||{};ls.set('cache_checkins',checkins);refresh();if(curT)renderGroup(curT);if(!$('tab-bus').classList.contains('hide'))doSearch()}
+function setCheckins(c){checkins=c||{};ls.set('cache_checkins',checkins);refresh();if(!$('team').classList.contains('hide'))renderTeam();if(curT)renderGroup(curT);if(!$('tab-bus').classList.contains('hide'))doSearch()}
 
 // ================= LOGIN =================
 $('lDev').value=device;
@@ -337,7 +353,7 @@ function boot(u){
   if(started)return;started=true;
   const c=ls.get('cache_tickets');if(c&&c.T)setTickets(c.T,c.meta);
   const cc=ls.get('cache_checkins');if(cc)setCheckins(cc);
-  B.start(setTickets,setCheckins,on=>{$('dot').classList.toggle('on',on);$('connLbl').textContent=on?'online · sincronizado':'SEM CONEXÃO — salvando local'},addLog);
+  B.start(setTickets,setCheckins,on=>{$('dot').classList.toggle('on',on);$('connLbl').textContent=on?'online · sincronizado':'SEM CONEXÃO — salvando local'},addLog,setPresence);
 }
 B.onUser(u=>boot(u));
 const logout=async()=>{if(!confirm('Sair deste aparelho?'))return;await B.logout();location.reload()};
@@ -352,6 +368,15 @@ function resolve(raw){
 const entryData=via=>({t:Date.now(),d:device,u:me?.email||'',v:via});
 let LOG={};let logTimer=null;
 function addLog(obj,replace){if(replace)LOG={};Object.assign(LOG,obj);clearTimeout(logTimer);logTimer=setTimeout(()=>{if(!$('tab-his').classList.contains('hide'))renderHist()},150)}
+let PRES={};
+function setPresence(p){PRES=p||{};const ppl=new Set(Object.values(PRES).map(v=>v.u+'|'+v.d));$('teamN').textContent=ppl.size;if(!$('team').classList.contains('hide'))renderTeam()}
+function renderTeam(){const byU={};Object.values(checkins).forEach(c=>{byU[c.u]=(byU[c.u]||0)+1});
+  const seen=new Map();Object.values(PRES).forEach(v=>{const k=v.u+'|'+v.d;if(!seen.has(k)||(seen.get(k).t||0)>(v.t||0))seen.set(k,v)});
+  const rows=[...seen.values()].sort((a,b)=>String(a.d).localeCompare(String(b.d)));
+  $('teamList').innerHTML=rows.map(v=>`<div class="it"><div class="n"><span class="on-dot"></span>${esc(v.d)}${v.u===me?.email?' <span class="mut">(você)</span>':''}</div><div class="a"><span class="pill p-ok">${byU[v.u]||0} validações</span></div><div class="d">${esc(v.u)} · online desde ${v.t?fmtT(v.t).slice(0,5):'—'}</div></div>`).join('')||'<div class="mut">Ninguém online.</div>'}
+$('teamBtn').onclick=()=>{renderTeam();$('team').classList.remove('hide')};
+$('teamClose').onclick=()=>$('team').classList.add('hide');
+$('team').onclick=e=>{if(e.target.id==='team')$('team').classList.add('hide')};
 const origTxt=c=>c?`${c.d||''}${c.u?' · '+c.u:''} às ${fmtT(c.t)}`:'';
 function logEv(a,k,extra={}){try{const t=T[k];const p=B.log({a,k:String(k).slice(0,80),n:t?String(t.n||'').slice(0,120):'',d:device,u:me?.email||'',...extra});if(p&&p.catch)p.catch(err=>console.warn('log',err))}catch(e){console.warn(e)}}
 
@@ -404,7 +429,7 @@ $('allBtn').onclick=async()=>{
   const ks=(byBuyer.get(curT._b)||[]).filter(k=>isValid(T[k])&&!checkins[k]);let ok=0,ja=0;
   $('allBtn').disabled=true;
   try{for(const k of ks){const r=await B.checkin(k,entryData('grupo'),checkins);if(r.ok){ok++;logEv('validou',k,{v:'grupo'})}else{ja++;logEv('repetido',k,{v:'grupo',orig:origTxt(r.existing)})}}}catch(err){alert('Erro: '+(err.code||err.message))}
-  beep(true);if(ja)alert(`${ok} liberado(s). ${ja} já tinham entrado por outra portaria.`);
+  beep(ok>0);if(ja)alert(`${ok} liberado(s). ${ja} já tinham entrado por outra portaria.`);
 };
 document.addEventListener('click',async e=>{
   const k=e.target.dataset?.lib;if(!k)return;e.target.disabled=true;
@@ -529,8 +554,15 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)$('
 
 // ================= SOM =================
 let ac=null;function initAudio(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();ac.resume()}catch(e){}}
-document.addEventListener('pointerdown',initAudio,{once:true});
-function beep(ok){try{initAudio();const o=ac.createOscillator(),g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=ok?880:220;o.type=ok?'sine':'square';g.gain.value=.2;o.start();o.stop(ac.currentTime+(ok?.15:.5))}catch(e){}if(navigator.vibrate)navigator.vibrate(ok?80:[250,100,250])}
+['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,initAudio,{once:true,capture:true}));
+function tone(f,start,dur,type='sine',vol=.22){const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;o.connect(g);g.connect(ac.destination);const t0=ac.currentTime+start;g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+.015);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);o.start(t0);o.stop(t0+dur+.02)}
+function beep(ok){
+  try{initAudio();
+    if(ok){tone(1046.5,0,.16);tone(1318.5,.09,.16);tone(1568,.18,.32)}   // dó-mi-sol: som positivo
+    else{tone(196,0,.22,'square',.12);tone(155.6,.24,.3,'square',.12)}     // som grave curto (iPhone não vibra)
+  }catch(e){}
+  if(!ok&&navigator.vibrate)navigator.vibrate([300,120,300,120,300]);   // não validado: vibra
+}
 </script>
 </body>
 </html>
