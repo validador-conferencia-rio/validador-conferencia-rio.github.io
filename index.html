@@ -32,6 +32,7 @@ header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px so
 .bar{height:4px;background:var(--line);border-radius:4px;margin-top:8px;overflow:hidden}.bar>div{height:100%;background:#fff;width:0;transition:width .3s}
 .sub{font-size:12px;color:var(--mut);margin-top:4px;display:flex;justify-content:space-between;gap:8px}
 main{max-width:860px;margin:0 auto;padding:12px;display:grid;gap:12px}
+main>*,.tab,.rcol,.card{min-width:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
 h3{margin:0 0 10px;font-size:15px}
 .row{display:flex;gap:8px;align-items:center}
@@ -61,6 +62,11 @@ button:disabled{opacity:.4}
 #flash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
 #flash.ok{background:var(--ok)}#flash.warn{background:var(--warn);color:#111}#flash.err{background:var(--err)}
 #flash .big{font-size:clamp(40px,12vw,84px)}#flash .name{font-size:clamp(22px,6vw,40px)}#flash .meta{font-size:16px}
+/* histórico */
+.chips{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.chips::-webkit-scrollbar{display:none}.chips button{flex:none}.chips button{padding:7px 12px;font-size:13px}.chips button.on{background:#fff;color:#000;border-color:#fff;font-weight:700}
+.evt{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.evt-validou{background:#1fa35b33;color:#5fe39a}.evt-desfez{background:#d23a3a;color:#fff}.evt-repetido{background:#e0a40033;color:#ffd256}.evt-bloqueado,.evt-nao_encontrado{background:#d23a3a33;color:#ff8a8a}.evt-zerou{background:#fff;color:#000}.evt-base{background:#333;color:#fff}
+.it.hx{grid-template-columns:1fr}.it.hx .d{grid-column:1}
 #tk{position:fixed;inset:0;z-index:60;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center;overflow:auto}
 #tk img.l{width:150px}#tk .ev{font-weight:700;font-size:17px}#tk .sim{font-size:10px;color:#888;letter-spacing:.06em}
 #tk .qr{background:#fff;border-radius:16px;padding:16px;width:min(78vw,320px)}#tk .qr svg{width:100%;height:auto;display:block}
@@ -76,7 +82,7 @@ button:disabled{opacity:.4}
 .p-ok{background:#1fa35b33;color:#5fe39a}.p-in{background:#e0a40033;color:#ffd256}.p-bad{background:#d23a3a33;color:#ff8a8a}
 /* nav */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;background:#000;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
-nav button{flex:1;border:0;border-radius:0;font-weight:500;background:none;height:var(--nav);color:var(--mut);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+nav button{flex:1;min-width:0;padding:0 2px;border:0;border-radius:0;font-weight:500;background:none;height:var(--nav);color:var(--mut);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
 nav button span{font-size:20px;line-height:1}
 nav button.on{color:var(--acc)}
 /* login */
@@ -183,6 +189,16 @@ nav button.on{color:var(--acc)}
       <button id="logoutBtn">Sair deste aparelho</button>
     </div>
   </section>
+  <section id="tab-his" class="tab hide">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:10px"><h3 style="margin:0">Histórico (auditoria)</h3><button class="sm" id="hisCsv">⬇ CSV</button></div>
+      <div class="mut" style="margin-bottom:10px">Tudo que acontece no validador fica registrado com quem fez e o horário do servidor. Ninguém consegue apagar ou editar este histórico pelo app.</div>
+      <div class="chips" id="hisChips"></div>
+      <input id="hisQ" type="search" placeholder="Filtrar por código, nome, e-mail ou aparelho" autocomplete="off" style="margin:10px 0">
+      <div class="list" id="hisList"></div>
+      <div class="mut" id="hisMore" style="margin-top:8px"></div>
+    </div>
+  </section>
   <section id="tab-cfg" class="tab hide">
     <div class="card" style="display:grid;gap:10px">
       <div class="mut" id="whoami"></div>
@@ -195,6 +211,7 @@ nav button.on{color:var(--acc)}
   <button data-tab="val" class="on"><span>▣</span>Validar</button>
   <button data-tab="bus"><span>⌕</span>Buscar</button>
   <button data-tab="log"><span>☰</span>Entradas</button>
+  <button data-tab="his"><span>⟲</span>Histórico</button>
   <button data-tab="adm" id="navAdm" class="hide"><span>⚙</span>Admin</button>
   <button data-tab="cfg" id="navCfg"><span>⚙</span>Conta</button>
 </nav>
@@ -229,14 +246,16 @@ if(DEMO){
   $('demoNote').classList.remove('hide');
   const K='demo_db_v2';const read=()=>ls.get(K)||{tickets:{},checkins:{},meta:null};
   let cbs=null,user=ls.get('demo_user');
-  const emit=()=>{if(!cbs)return;const d=read();cbs.t(d.tickets||{},d.meta);cbs.c(d.checkins||{})};
+  const emit=()=>{if(!cbs)return;const d=read();cbs.t(d.tickets||{},d.meta);cbs.c(d.checkins||{});cbs.l&&cbs.l(d.log||{},true)};
   window.addEventListener('storage',e=>{if(e.key===K)emit()});
   const write=f=>{const d=read();f(d);ls.set(K,d);emit()};
   B={
     async login(e){user={email:e};ls.set('demo_user',user);return user},
     async logout(){user=null;localStorage.removeItem('demo_user')},
     onUser(cb){setTimeout(()=>cb(user),0)},
-    start(t,c,conn){cbs={t,c};conn(true);emit()},
+    start(t,c,conn,l){cbs={t,c,l};conn(true);emit()},
+    async log(e){write(d=>{d.log=d.log||{};d.log['L'+Date.now()+Math.random().toString(36).slice(2,6)]={...e,t:Date.now()}})},
+    isOnline(){return true},
     async checkin(k,data){let res;write(d=>{d.checkins=d.checkins||{};if(d.checkins[k])res={ok:false,existing:d.checkins[k]};else{d.checkins[k]=data;res={ok:true}}});return res},
     async undo(k){write(d=>{delete d.checkins[k]})},
     async upload(t,m){write(d=>{d.tickets=t;d.meta=m})},
@@ -257,7 +276,10 @@ if(DEMO){
       D.onValue(D.ref(db,'tickets'),s=>{tk=s.val()||{};t(tk,meta)});
       D.onValue(D.ref(db,'checkins'),s=>c(s.val()||{}));
       D.onValue(D.ref(db,'.info/connected'),s=>{online=!!s.val();conn(online)});
+      if(l)D.onChildAdded(D.ref(db,'log'),s=>l({[s.key]:s.val()},false));
     },
+    log(e){return D.push(D.ref(db,'log'),{...e,t:D.serverTimestamp()})},
+    isOnline(){return online},
     async checkin(k,data,cache){
       const r=D.ref(db,'checkins/'+k);
       if(!online){ // sem internet: decide pelo cache local e enfileira a gravação
@@ -315,7 +337,7 @@ function boot(u){
   if(started)return;started=true;
   const c=ls.get('cache_tickets');if(c&&c.T)setTickets(c.T,c.meta);
   const cc=ls.get('cache_checkins');if(cc)setCheckins(cc);
-  B.start(setTickets,setCheckins,on=>{$('dot').classList.toggle('on',on);$('connLbl').textContent=on?'online · sincronizado':'SEM CONEXÃO — salvando local'});
+  B.start(setTickets,setCheckins,on=>{$('dot').classList.toggle('on',on);$('connLbl').textContent=on?'online · sincronizado':'SEM CONEXÃO — salvando local'},addLog);
 }
 B.onUser(u=>boot(u));
 const logout=async()=>{if(!confirm('Sair deste aparelho?'))return;await B.logout();location.reload()};
@@ -328,18 +350,23 @@ function resolve(raw){
   return null;
 }
 const entryData=via=>({t:Date.now(),d:device,u:me?.email||'',v:via});
+let LOG={};let logTimer=null;
+function addLog(obj,replace){if(replace)LOG={};Object.assign(LOG,obj);clearTimeout(logTimer);logTimer=setTimeout(()=>{if(!$('tab-his').classList.contains('hide'))renderHist()},150)}
+const origTxt=c=>c?`${c.d||''}${c.u?' · '+c.u:''} às ${fmtT(c.t)}`:'';
+function logEv(a,k,extra={}){try{const t=T[k];const p=B.log({a,k:String(k).slice(0,80),n:t?String(t.n||'').slice(0,120):'',d:device,u:me?.email||'',...extra});if(p&&p.catch)p.catch(err=>console.warn('log',err))}catch(e){console.warn(e)}}
 
 let busy=false;
 async function validate(raw,via){
   raw=String(raw||'').trim();if(!raw||busy)return;
   const k=resolve(raw);
-  if(!k){result('err','NÃO ENCONTRADO',esc(raw),'Código não existe na base. Use a aba Buscar.');$('groupCard').classList.add('hide');curT=null;return}
+  if(!k){logEv('nao_encontrado',normCode(raw).replace(/[.#$\[\]\/]/g,'_').slice(0,60),{v:via});result('err','NÃO ENCONTRADO',esc(raw),'Código não existe na base. Use a aba Buscar.');$('groupCard').classList.add('hide');curT=null;return}
   const t=T[k];
   const vip=/vip/i.test(t.t)?'<span class="tag vip">VIP</span>':'';
   const meta=`<span class="tag">${esc(t.t)}</span>${vip}<br>Pedido ${esc(t.p)} · ${esc(t.k)}${norm(t.c)&&norm(t.c)!==norm(t.n)?'<br>Comprador: '+esc(t.c):''}`+`<br><button class="sm" data-qr="${esc(t.k)}" style="margin-top:8px">Ver QR do ingresso</button>`;
-  if(!isValid(t)){result('err','BLOQUEADO',esc(t.n),`${meta}<br><b>Status: ${esc(t.s)}</b>`)}
+  if(!isValid(t)){logEv('bloqueado',k,{v:via,s:String(t.s)});result('err','BLOQUEADO',esc(t.n),`${meta}<br><b>Status: ${esc(t.s)}</b>`)}
   else{
     busy=true;let r;try{r=await B.checkin(k,entryData(via),checkins)}catch(err){busy=false;result('err','ERRO',esc(t.n),'Não gravou: '+esc(err.code||err.message)+'<br>Verifique login/conexão e tente de novo.');return}busy=false;
+    if(r.ok){logEv('validou',k,{v:via})}else{logEv('repetido',k,{v:via,orig:origTxt(r.existing)})}
     if(r.ok)result('ok','LIBERADO',esc(t.n),meta+(r.offline?'<br><b>⚠ sem conexão — sincroniza quando voltar</b>':''));
     else{const e=r.existing||{};result('warn','JÁ ENTROU',esc(t.n),`${meta}<br>Entrada às <b>${fmtT(e.t)}</b><br>Validado por: <b>${who(e)}</b>`)}
   }
@@ -376,13 +403,13 @@ function renderGroup(t){
 $('allBtn').onclick=async()=>{
   const ks=(byBuyer.get(curT._b)||[]).filter(k=>isValid(T[k])&&!checkins[k]);let ok=0,ja=0;
   $('allBtn').disabled=true;
-  try{for(const k of ks){const r=await B.checkin(k,entryData('grupo'),checkins);r.ok?ok++:ja++}}catch(err){alert('Erro: '+(err.code||err.message))}
+  try{for(const k of ks){const r=await B.checkin(k,entryData('grupo'),checkins);if(r.ok){ok++;logEv('validou',k,{v:'grupo'})}else{ja++;logEv('repetido',k,{v:'grupo',orig:origTxt(r.existing)})}}}catch(err){alert('Erro: '+(err.code||err.message))}
   beep(true);if(ja)alert(`${ok} liberado(s). ${ja} já tinham entrado por outra portaria.`);
 };
 document.addEventListener('click',async e=>{
   const k=e.target.dataset?.lib;if(!k)return;e.target.disabled=true;
   let r;try{r=await B.checkin(k,entryData('manual'),checkins)}catch(err){alert('Erro: '+(err.code||err.message));e.target.disabled=false;return}
-  if(r.ok)beep(true);else{beep(false);alert(`Já entrou às ${fmtT(r.existing?.t)} — validado por ${r.existing?.d||''} ${r.existing?.u||''}`)}
+  if(r.ok){beep(true);logEv('validou',k,{v:'manual'})}else{logEv('repetido',k,{v:'manual',orig:origTxt(r.existing)});beep(false);alert(`Já entrou às ${fmtT(r.existing?.t)} — validado por ${r.existing?.d||''} ${r.existing?.u||''}`)}
 });
 $('code').addEventListener('keydown',e=>{if(e.key==='Enter'){validate(e.target.value,'leitor');e.target.value=''}});
 $('go').onclick=()=>{validate($('code').value,'digitado');$('code').value=''};
@@ -391,7 +418,7 @@ $('go').onclick=()=>{validate($('code').value,'digitado');$('code').value=''};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
   document.querySelectorAll('.tab').forEach(s=>s.classList.add('hide'));$('tab-'+b.dataset.tab).classList.remove('hide');
-  if(b.dataset.tab==='log')renderLog();if(b.dataset.tab==='bus')$('search').focus();
+  if(b.dataset.tab==='log')renderLog();if(b.dataset.tab==='his')renderHist();if(b.dataset.tab==='bus')$('search').focus();
   window.scrollTo(0,0);
 });
 function refresh(){
@@ -406,7 +433,33 @@ function renderLog(){
   $('perDev').innerHTML=Object.entries(per).sort((a,b)=>b[1]-a[1]).map(([d,n])=>`${esc(d)}: <b>${n}</b>`).join(' · ')||'Nenhuma entrada ainda';
   $('logList').innerHTML=es.slice(0,100).map(([k,v])=>{const t=T[k]||{};return`<div class="it"><div class="n">${esc(t.n||k)}</div><div class="a"><span class="pill p-in">${fmtT(v.t)}</span><button class="sm danger" data-undo="${esc(k)}">desfazer</button></div><div class="d">${esc(k)} · ${esc(t.t)} · Pedido ${esc(t.p)}<br><b>Validado por:</b> ${who(v)} · ${esc(v.v)}</div></div>`}).join('');
 }
-document.addEventListener('click',async e=>{const k=e.target.dataset?.undo;if(!k)return;if(confirm(`Desfazer entrada de ${T[k]?.n||k}?`))await B.undo(k)});
+document.addEventListener('click',async e=>{const k=e.target.dataset?.undo;if(!k)return;
+  if(!B.isOnline()){alert('Desfazer só funciona com internet (precisa registrar no histórico).');return}
+  const c=checkins[k];const motivo=(prompt(`Desfazer a entrada de ${T[k]?.n||k}?\nValidado por ${origTxt(c)}.\n\nInforme o MOTIVO (fica registrado no histórico com seu nome e horário):`)||'').trim();
+  if(motivo.length<3){if(motivo)alert('Motivo muito curto. Nada foi desfeito.');return}
+  try{await B.log({a:'desfez',k,n:String(T[k]?.n||'').slice(0,120),d:device,u:me?.email||'',motivo:motivo.slice(0,300),orig:origTxt(c)});await B.undo(k)}catch(err){alert('Não foi possível desfazer: '+(err.code||err.message))}});
+const EVL={validou:'Validou',desfez:'Desfez',repetido:'Repetido',bloqueado:'Bloqueado',nao_encontrado:'Não encontrado',zerou:'Zerou tudo',base:'Base carregada'};
+const FIL=[['all','Todos'],['validou','Validações'],['desfez','Desfeitos'],['repetido','Repetidos'],['bloq','Bloqueados / não encontrados'],['adm','Admin']];
+let hisF='all';
+const fmtDT=ms=>ms?new Date(ms).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+function hisRows(){const q=norm($('hisQ').value);return Object.values(LOG).filter(e=>{
+  if(hisF==='validou'&&e.a!=='validou')return false;if(hisF==='desfez'&&e.a!=='desfez')return false;if(hisF==='repetido'&&e.a!=='repetido')return false;
+  if(hisF==='bloq'&&!['bloqueado','nao_encontrado'].includes(e.a))return false;if(hisF==='adm'&&!['zerou','base'].includes(e.a))return false;
+  if(q&&!(norm(e.k).includes(q)||norm(e.n).includes(q)||norm(e.u).includes(q)||norm(e.d).includes(q)||norm(e.motivo).includes(q)))return false;return true}).sort((a,b)=>(b.t||0)-(a.t||0))}
+function renderHist(){
+  const cnt={};Object.values(LOG).forEach(e=>cnt[e.a]=(cnt[e.a]||0)+1);
+  const cf=k=>k==='all'?Object.keys(LOG).length:k==='bloq'?(cnt.bloqueado||0)+(cnt.nao_encontrado||0):k==='adm'?(cnt.zerou||0)+(cnt.base||0):(cnt[k]||0);
+  $('hisChips').innerHTML=FIL.map(([k,l])=>`<button class="${hisF===k?'on':''}" data-hf="${k}">${l} (${cf(k)})</button>`).join('');
+  const rows=hisRows();
+  $('hisList').innerHTML=rows.slice(0,300).map(e=>`<div class="it hx"><div class="n"><span class="evt evt-${esc(e.a)}">${esc(EVL[e.a]||e.a)}</span> ${esc(e.n||'')} <span class="mut">${e.k&&e.k!=='*'?esc(e.k):''}</span></div><div class="d"><b>${fmtDT(e.t)}</b> · por <b>${esc(e.d)}</b>${e.u?' · '+esc(e.u):''}${e.v?' · via '+esc(e.v):''}${e.s?' · status: '+esc(e.s):''}${e.orig?'<br>Entrada original: '+esc(e.orig):''}${e.motivo?'<br><b>Motivo:</b> '+esc(e.motivo):''}</div></div>`).join('')||'<div class="mut">Nada registrado ainda.</div>';
+  $('hisMore').textContent=rows.length>300?`Mostrando 300 de ${rows.length}. Use o filtro ou exporte o CSV.`:'';
+}
+document.addEventListener('click',e=>{const f=e.target.dataset?.hf;if(f){hisF=f;renderHist()}});
+$('hisQ').oninput=()=>renderHist();
+$('hisCsv').onclick=()=>{const L=[['data_hora','acao','codigo','nome','aparelho','usuario','via','status','motivo','entrada_original']];
+  Object.values(LOG).sort((a,b)=>(a.t||0)-(b.t||0)).forEach(e=>L.push([e.t?new Date(e.t).toLocaleString('pt-BR'):'',EVL[e.a]||e.a,e.k,e.n,e.d,e.u,e.v,e.s,e.motivo,e.orig]));
+  const csv='\ufeff'+L.map(l=>l.map(x=>`"${String(x??'').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`historico_${new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')}.csv`;a.click()};
 function doSearch(){
   const q=norm($('search').value);if(q.length<3){$('searchList').innerHTML='';return}
   const qc=q.toUpperCase(),res=[];
@@ -441,11 +494,12 @@ $('file').onchange=e=>{
     if(!confirm(`Carregar ${n} ingressos para TODOS os aparelhos?${dup?`\n(${dup} códigos duplicados ignorados)`:''}`)){$('upMsg').textContent='Cancelado';return}
     $('upMsg').textContent='Enviando…';
     await B.upload(out,{name:f.name,count:n,at:Date.now(),by:me?.email||''});
+    logEv('base','*',{n:`${f.name} · ${n} ingressos`});
     $('upMsg').textContent=`✔ ${n} ingressos carregados. Colunas detectadas: ${Object.entries(m).map(([k,i])=>k+'='+rows[hi][i]).join(', ')}`;
   }catch(err){$('upMsg').textContent='Erro: '+(err.code||err.message)}e.target.value=''};
   r.readAsArrayBuffer(f);
 };
-$('resetBtn').onclick=async()=>{if(prompt('Apaga TODAS as entradas de TODOS os aparelhos. Digite ZERAR:')==='ZERAR'){await B.reset();$('upMsg').textContent='Entradas zeradas.'}};
+$('resetBtn').onclick=async()=>{if(prompt('Apaga TODAS as entradas de TODOS os aparelhos. Digite ZERAR:')==='ZERAR'){await B.log({a:'zerou',k:'*',n:Object.keys(checkins).length+' entradas apagadas',d:device,u:me?.email||''});await B.reset();$('upMsg').textContent='Entradas zeradas.'}};
 
 // ================= CÂMERA =================
 let stream=null,detector=null,paused=0;

@@ -11,7 +11,13 @@
       ".write": "auth != null && auth.token.email === 'admin@validador.app'",
       "$code": {
         ".write": "auth != null && root.child('tickets').child($code).exists()",
-        ".validate": "!newData.exists() || newData.hasChildren(['t', 'd'])"
+        ".validate": "!newData.exists() || (newData.hasChildren(['t', 'd', 'u']) && newData.child('u').val() === auth.token.email)"
+      }
+    },
+    "log": {
+      "$id": {
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['a', 'k', 't', 'd', 'u']) && newData.child('u').val() === auth.token.email && newData.child('t').val() === now"
       }
     }
   }
