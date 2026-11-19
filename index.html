@@ -61,6 +61,10 @@ button:disabled{opacity:.4}
 #flash{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
 #flash.ok{background:var(--ok)}#flash.warn{background:var(--warn);color:#111}#flash.err{background:var(--err)}
 #flash .big{font-size:clamp(40px,12vw,84px)}#flash .name{font-size:clamp(22px,6vw,40px)}#flash .meta{font-size:16px}
+#tk{position:fixed;inset:0;z-index:60;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;text-align:center;overflow:auto}
+#tk img.l{width:150px}#tk .ev{font-weight:700;font-size:17px}#tk .sim{font-size:10px;color:#888;letter-spacing:.06em}
+#tk .qr{background:#fff;border-radius:16px;padding:16px;width:min(78vw,320px)}#tk .qr svg{width:100%;height:auto;display:block}
+#tk .cd{font-size:22px;font-weight:800;letter-spacing:.04em}#tk .nm{font-size:16px;font-weight:700}#tk .mt{font-size:13px;color:#bbb}
 #flash .tap{position:absolute;bottom:calc(20px + env(safe-area-inset-bottom));font-size:13px;opacity:.8}
 /* listas (cards no celular) */
 .list{display:grid;gap:8px}
@@ -197,10 +201,12 @@ nav button.on{color:var(--acc)}
 </div>
 
 <div id="flash" class="hide"></div>
+<div id="tk" class="hide"></div>
 <canvas id="canvas" class="hide"></canvas>
 
 <script src="xlsx.full.min.js"></script>
 <script src="jsQR.js"></script>
+<script src="qrcode.js"></script>
 <script src="config.js"></script>
 <script type="module">
 const CFG=window.APP_CONFIG||{};
@@ -330,7 +336,7 @@ async function validate(raw,via){
   if(!k){result('err','NÃO ENCONTRADO',esc(raw),'Código não existe na base. Use a aba Buscar.');$('groupCard').classList.add('hide');curT=null;return}
   const t=T[k];
   const vip=/vip/i.test(t.t)?'<span class="tag vip">VIP</span>':'';
-  const meta=`<span class="tag">${esc(t.t)}</span>${vip}<br>Pedido ${esc(t.p)} · ${esc(t.k)}${norm(t.c)&&norm(t.c)!==norm(t.n)?'<br>Comprador: '+esc(t.c):''}`;
+  const meta=`<span class="tag">${esc(t.t)}</span>${vip}<br>Pedido ${esc(t.p)} · ${esc(t.k)}${norm(t.c)&&norm(t.c)!==norm(t.n)?'<br>Comprador: '+esc(t.c):''}`+`<br><button class="sm" data-qr="${esc(t.k)}" style="margin-top:8px">Ver QR do ingresso</button>`;
   if(!isValid(t)){result('err','BLOQUEADO',esc(t.n),`${meta}<br><b>Status: ${esc(t.s)}</b>`)}
   else{
     busy=true;let r;try{r=await B.checkin(k,entryData(via),checkins)}catch(err){busy=false;result('err','ERRO',esc(t.n),'Não gravou: '+esc(err.code||err.message)+'<br>Verifique login/conexão e tente de novo.');return}busy=false;
@@ -346,12 +352,16 @@ function result(cls,big,name,meta){
   beep(cls==='ok');
 }
 $('flash').onclick=()=>$('flash').classList.add('hide');
+function showTicket(k){const t=T[k];if(!t)return;let svg='';try{const q=qrcode(0,'M');q.addData(t.k);q.make();svg=q.createSvgTag({cellSize:8,margin:2,scalable:true})}catch(e){svg='erro ao gerar QR'}
+  $('tk').innerHTML=`<img class="l" src="logo.png" alt=""><div class="ev">Conferência Rio</div><div class="sim">INGRESSO — VISUALIZAÇÃO NO VALIDADOR</div><div class="qr">${svg}</div><div class="cd">${esc(t.k)}</div><div class="nm">${esc(t.n)}</div><div class="mt">${esc(t.t)} · Pedido ${esc(t.p)}${norm(t.c)&&norm(t.c)!==norm(t.n)?'<br>Comprador: '+esc(t.c):''}</div><div>${situ(t)}</div><button class="pri" id="tkClose" style="margin-top:6px">Fechar</button>`;
+  $('tk').classList.remove('hide');$('tkClose').onclick=()=>$('tk').classList.add('hide')}
+document.addEventListener('click',e=>{const k=e.target.dataset?.qr;if(k)showTicket(k)});
 
 const who=c=>c?`${esc(c.d)}${c.u?' · '+esc(c.u):''}`:'';
 function situ(t){if(!isValid(t))return`<span class="pill p-bad">${esc(t.s)}</span>`;const c=checkins[t.k];return c?`<span class="pill p-in">Entrou ${fmtT(c.t).slice(0,5)}</span>`:'<span class="pill p-ok">Pendente</span>'}
 function itemHTML(t){
   const pend=isValid(t)&&!checkins[t.k];
-  return`<div class="it"><div class="n">${esc(t.n)}</div><div class="a">${situ(t)}${pend?`<button class="sm" data-lib="${esc(t.k)}">Liberar</button>`:''}</div><div class="d">${esc(t.k)} · ${esc(t.t)} · Pedido ${esc(t.p)}${norm(t.c)&&norm(t.c)!==norm(t.n)?' · comprador: '+esc(t.c):''}${checkins[t.k]?`<br><b>Validado por:</b> ${who(checkins[t.k])}`:''}</div></div>`;
+  return`<div class="it"><div class="n">${esc(t.n)}</div><div class="a">${situ(t)}<span style="display:flex;gap:6px"><button class="sm" data-qr="${esc(t.k)}">QR</button>${pend?`<button class="sm" data-lib="${esc(t.k)}">Liberar</button>`:''}</span></div><div class="d">${esc(t.k)} · ${esc(t.t)} · Pedido ${esc(t.p)}${norm(t.c)&&norm(t.c)!==norm(t.n)?' · comprador: '+esc(t.c):''}${checkins[t.k]?`<br><b>Validado por:</b> ${who(checkins[t.k])}`:''}</div></div>`;
 }
 function renderGroup(t){
   curT=t;const ks=(byBuyer.get(t._b)||[]).filter(k=>k!==t.k);
